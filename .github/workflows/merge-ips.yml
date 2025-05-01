@@ -1,9 +1,13 @@
 name: 定时合并 IP 列表
 
+# 给 GITHUB_TOKEN 分配写权限
+permissions:
+  contents: write
+
 on:
   schedule:
-    - cron: '0 0 * * *'  # 每天 UTC 时间 00:00 执行一次（北京时间为 08:00）
-  workflow_dispatch:  # 允许手动触发
+    - cron: '0 0 * * *'  # 每天 UTC 00:00 运行一次
+  workflow_dispatch:    # 允许手动触发
 
 jobs:
   fetch-and-merge:
@@ -12,10 +16,12 @@ jobs:
     steps:
       - name: 检出代码
         uses: actions/checkout@v3
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          persist-credentials: true
 
       - name: 获取并合并 IP 列表
         run: |
-          # 定义原始文件链接
           urls=(
             "https://raw.githubusercontent.com/ymyuuu/IPDB/main/BestCF/bestcfv4.txt"
             "https://raw.githubusercontent.com/ymyuuu/IPDB/main/BestCF/bestcfv6.txt"
@@ -25,22 +31,18 @@ jobs:
             "https://raw.githubusercontent.com/hubbylei/bestcf/main/bestcf.txt"
           )
 
-          # 创建一个临时文件用于存储合并内容
           temp_file=$(mktemp)
-
-          # 遍历每个 URL，获取内容并追加到临时文件
           for url in "${urls[@]}"; do
             curl -s "$url" >> "$temp_file"
-            echo -e "\n" >> "$temp_file"  # 添加换行符分隔不同文件内容
+            echo -e "\n" >> "$temp_file"
           done
 
-          # 将合并后的内容保存到新的文件
           mv "$temp_file" merged_ips.txt
 
-      - name: 提交合并后的文件
+      - name: 提交并推送合并后的文件
         run: |
-          git config --global user.name "GitHub Actions"
-          git config --global user.email "actions@github.com"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
           git add merged_ips.txt
-          git commit -m "自动合并 IP 列表"
+          git diff --quiet || git commit -m "自动合并 IP 列表"
           git push
