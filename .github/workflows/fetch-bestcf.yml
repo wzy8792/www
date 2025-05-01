@@ -1,0 +1,35 @@
+name: 定时更新 bestcf.txt
+
+# 赋予写权限，否则无法 push
+permissions:
+  contents: write
+
+on:
+  schedule:
+    - cron: '0 8 * * *'   # 每天 UTC 08:00（可按需调整）
+  workflow_dispatch:     # 手动触发
+
+jobs:
+  update-bestcf:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 检出仓库
+        uses: actions/checkout@v3
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          persist-credentials: true
+
+      - name: 拉取 raw 文件并保存
+        run: |
+          curl -s https://raw.githubusercontent.com/hubbylei/bestcf/main/bestcf.txt \
+            -o latest_bestcf.txt
+
+      - name: 提交并推送
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add latest_bestcf.txt
+          # 只有内容有变更时才 commit
+          git diff --cached --quiet || git commit -m "更新 bestcf.txt"
+          git push
