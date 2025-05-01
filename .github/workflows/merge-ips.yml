@@ -1,0 +1,48 @@
+name: 定时更新并合并多源 TXT 列表
+
+permissions:
+  contents: write
+
+on:
+  schedule:
+    - cron: '0 8 * * *'   # 每天 UTC 08:00 执行，可按需调整
+  workflow_dispatch:     # 允许手动触发
+
+jobs:
+  fetch-and-merge:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 检出仓库
+        uses: actions/checkout@v3
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          persist-credentials: true
+
+      - name: 拉取所有 Raw 文件并合并
+        run: |
+          urls=(
+            "https://raw.githubusercontent.com/lu-lingyun/CloudflareST/main/TLS.txt"
+            "https://raw.githubusercontent.com/camel52zhang/yxip/main/ip.txt"
+            "https://raw.githubusercontent.com/946727185/auto-ip-update/main/%E4%BC%98%E9%80%89ip.txt"
+            "https://raw.githubusercontent.com/ymyuuu/IPDB/main/BestCF/bestcfv6.txt"
+            "https://raw.githubusercontent.com/ymyuuu/IPDB/main/BestCF/bestcfv4.txt"
+          )
+
+          tmpfile=$(mktemp)
+          for url in "${urls[@]}"; do
+            echo "Fetching $url"
+            curl -s "$url" >> "$tmpfile"
+            echo -e "\n" >> "$tmpfile"
+          done
+
+          mv "$tmpfile" merged_all.txt
+
+      - name: 提交并推送合并后的文件
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add merged_all.txt
+          # 只有有变更时才提交
+          git diff --cached --quiet || git commit -m "定时合并 5 个源的 TXT 列表"
+          git push
