@@ -1,15 +1,17 @@
-name: 定时更新并合并多源 TXT 列表
+# 文件路径：.github/workflows/fetch-preferred-ip.yml
+name: 定时更新优选 IP 列表
 
+# 授予 GITHUB_TOKEN 写权限，才能 push 结果到仓库
 permissions:
-  contents: write
+  contents: write  # 控制权限以允许写入仓库内容 0
 
 on:
   schedule:
-    - cron: '0 8 * * *'   # 每天 UTC 08:00 执行，可按需调整
+    - cron: '0 2 * * *'   # 每天 UTC 02:00 运行一次（可根据需要调整） 1
   workflow_dispatch:     # 允许手动触发
 
 jobs:
-  fetch-and-merge:
+  fetch-and-save:
     runs-on: ubuntu-latest
 
     steps:
@@ -17,32 +19,17 @@ jobs:
         uses: actions/checkout@v3
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          persist-credentials: true
+          persist-credentials: true  # 保留写权限的令牌以便后续 push 2
 
-      - name: 拉取所有 Raw 文件并合并
+      - name: 拉取优选 IP 列表并保存
         run: |
-          urls=(
-            "https://raw.githubusercontent.com/lu-lingyun/CloudflareST/main/TLS.txt"
-            "https://raw.githubusercontent.com/camel52zhang/yxip/main/ip.txt"
-            "https://raw.githubusercontent.com/946727185/auto-ip-update/main/%E4%BC%98%E9%80%89ip.txt"
-            "https://raw.githubusercontent.com/ymyuuu/IPDB/main/BestCF/bestcfv6.txt"
-            "https://raw.githubusercontent.com/ymyuuu/IPDB/main/BestCF/bestcfv4.txt"
-          )
+          curl --silent https://raw.githubusercontent.com/946727185/auto-ip-update/main/优选ip.txt \
+            -o preferred_ips.txt    # 使用 curl 获取内容并输出到 preferred_ips.txt 3
 
-          tmpfile=$(mktemp)
-          for url in "${urls[@]}"; do
-            echo "Fetching $url"
-            curl -s "$url" >> "$tmpfile"
-            echo -e "\n" >> "$tmpfile"
-          done
-
-          mv "$tmpfile" merged_all.txt
-
-      - name: 提交并推送合并后的文件
+      - name: 提交并推送结果
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add merged_all.txt
-          # 只有有变更时才提交
-          git diff --cached --quiet || git commit -m "定时合并 5 个源的 TXT 列表"
-          git push
+          git add preferred_ips.txt
+          git diff --cached --quiet || git commit -m "自动更新优选 IP 列表"
+          git push                # 将生成的文件推送回仓库 4
