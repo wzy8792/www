@@ -1,49 +1,50 @@
 name: 定时拉取并合并 TXT 列表
 
-# 为 GITHUB_TOKEN 赋予写权限，才能推送更新
+# 保证 GITHUB_TOKEN 拥有写权限，才能提交文件
 permissions:
   contents: write
 
 on:
   # 使用 schedule 事件，每天 UTC 08:00 执行一次
   schedule:
-    - cron: '0 8 * * *'  # Cron 表达式，详见 POSIX 语法 0
-  workflow_dispatch:    # 允许手动触发
+    - cron: '0 8 * * *'      # POSIX cron 语法：分钟 小时 月内日 月 星期 1
+  workflow_dispatch:        # 允许手动触发
 
 jobs:
   fetch-and-merge:
     runs-on: ubuntu-latest
 
     steps:
-      - name: 检出代码
+      - name: 检出仓库
         uses: actions/checkout@v3
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          persist-credentials: true
+          persist-credentials: true   # 保留写权限的令牌，确保后续 git push 2
 
-      - name: 拉取 Raw 文件并合并
+      - name: 拉取所有 Raw 文件并合并
         run: |
           urls=(
-            "https://raw.githubusercontent.com/ymyuuu/IPDB/main/BestCF/bestcfv4.txt"
             "https://raw.githubusercontent.com/lu-lingyun/CloudflareST/main/TLS.txt"
+            "https://raw.githubusercontent.com/camel52zhang/yxip/main/ip.txt"
+            "https://raw.githubusercontent.com/946727185/auto-ip-update/main/%E4%BC%98%E9%80%89ip.txt"
+            "https://raw.githubusercontent.com/ymyuuu/IPDB/main/BestCF/bestcfv6.txt"
+            "https://raw.githubusercontent.com/ymyuuu/IPDB/main/BestCF/bestcfv4.txt"
           )
 
           tmpfile=$(mktemp)
           for url in "${urls[@]}"; do
             echo "Fetching $url"
-            # 使用 curl 静默下载内容 1
-            curl --silent "$url" >> "$tmpfile"
-            echo -e "\n" >> "$tmpfile"
+            curl --silent "$url" >> "$tmpfile"   # 使用 curl 静默模式下载内容 3
+            echo -e "\n" >> "$tmpfile"           # 添加换行以区分不同文件 4
           done
 
-          # 输出合并后的文件
-          mv "$tmpfile" merged.txt
+          mv "$tmpfile" merged_all.txt          # 将合并结果保存为 merged_all.txt
 
       - name: 提交并推送合并后的文件
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add merged.txt
-          # 仅当内容有变更时才提交
-          git diff --cached --quiet || git commit -m "自动合并 v4 与 TLS 列表"
-          git push
+          git add merged_all.txt
+          # 仅当文件内容有变化时才提交，避免无效提交
+          git diff --cached --quiet || git commit -m "定时合并多源 TXT 列表"
+          git push                           # 推送到远端仓库 5
