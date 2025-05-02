@@ -1,0 +1,49 @@
+name: 定时拉取并合并 TXT 列表
+
+# 为 GITHUB_TOKEN 赋予写权限，才能推送更新
+permissions:
+  contents: write
+
+on:
+  # 使用 schedule 事件，每天 UTC 08:00 执行一次
+  schedule:
+    - cron: '0 8 * * *'  # Cron 表达式，详见 POSIX 语法 0
+  workflow_dispatch:    # 允许手动触发
+
+jobs:
+  fetch-and-merge:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v3
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          persist-credentials: true
+
+      - name: 拉取 Raw 文件并合并
+        run: |
+          urls=(
+            "https://raw.githubusercontent.com/ymyuuu/IPDB/main/BestCF/bestcfv4.txt"
+            "https://raw.githubusercontent.com/lu-lingyun/CloudflareST/main/TLS.txt"
+          )
+
+          tmpfile=$(mktemp)
+          for url in "${urls[@]}"; do
+            echo "Fetching $url"
+            # 使用 curl 静默下载内容 1
+            curl --silent "$url" >> "$tmpfile"
+            echo -e "\n" >> "$tmpfile"
+          done
+
+          # 输出合并后的文件
+          mv "$tmpfile" merged.txt
+
+      - name: 提交并推送合并后的文件
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add merged.txt
+          # 仅当内容有变更时才提交
+          git diff --cached --quiet || git commit -m "自动合并 v4 与 TLS 列表"
+          git push
