@@ -24,6 +24,7 @@ jobs:
       - name: 拉取所有 Raw 文件并合并
         run: |
           urls=(
+            "https://raw.githubusercontent.com/roosterkid/openproxylist/refs/heads/main/V2RAY_RAW.txt"
             "https://raw.githubusercontent.com/lu-lingyun/CloudflareST/main/TLS.txt"
             "https://raw.githubusercontent.com/camel52zhang/yxip/main/ip.txt"
             "https://raw.githubusercontent.com/946727185/auto-ip-update/main/%E4%BC%98%E9%80%89ip.txt"
