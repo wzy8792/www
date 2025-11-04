@@ -30,6 +30,7 @@ jobs:
             "https://raw.githubusercontent.com/946727185/auto-ip-update/main/%E4%BC%98%E9%80%89ip.txt"
             "https://raw.githubusercontent.com/ymyuuu/IPDB/main/BestCF/bestcfv6.txt"
             "https://raw.githubusercontent.com/ymyuuu/IPDB/main/BestCF/bestcfv4.txt"
+            "https://raw.githubusercontent.com/sanzang-tang/proxyip/refs/heads/main/%E4%BC%98%E9%80%89ip.txt"
           )
 
           tmpfile=$(mktemp)
